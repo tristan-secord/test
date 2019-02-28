@@ -1,0 +1,1421 @@
+schema {
+  query: RootQueryType
+  mutation: RootMutationType
+  subscription: RootSubscriptionType
+}
+
+"""Filter what events to receive when subscribed to anyEventUpdated"""
+enum AnyEventUpdatedFilter {
+  """Only receive game start events"""
+  GAME_START
+  """Received our first set of odds for the event"""
+  OPENING_ODDS_AVAILABLE @deprecated(reason: "Use `PRE_GAME_ODDS_UPDATED` instead.  Due to the way we receive odds updates, this `OPENING_ODDS_AVAILABLE`
+will send an initial update with a couple fields, then no additional updates when certains fields/odds
+become available.  `PRE_GAME_ODDS_UPDATED` will send all updates to odds.
+")
+  """Only receive updates when odds (while in pre game state) change for an event"""
+  PRE_GAME_ODDS_UPDATED
+}
+
+type BaseballBoxScore implements BoxScore, Node {
+  """Away team's score"""
+  awayScore: Int!
+  """Away team errors"""
+  awayScoreErrors: Int!
+  """Away team hits"""
+  awayScoreHits: Int!
+  """Away team runts"""
+  awayScoreRuns: Int!
+  """Number of ball for current at bat, `null` if no one is batting currently"""
+  balls: Int
+  """Is first base occupied?"""
+  firstBaseOccupied: Boolean!
+  """Home team's score"""
+  homeScore: Int!
+  """Home team errors"""
+  homeScoreErrors: Int!
+  """Home team hits"""
+  homeScoreHits: Int!
+  """Home team runs"""
+  homeScoreRuns: Int!
+  """The ID of an object"""
+  id: ID!
+  """Number of outs for batting team's half of the inning, `null` if a team is not batting currently"""
+  outs: Int
+  """Current time"""
+  progress: Progress!
+  """Is second base occupied?"""
+  secondBaseOccupied: Boolean!
+  """Number of strikes for current at bat, `null` if no one is batting currently"""
+  strikes: Int
+  """Is third base occupied?"""
+  thirdBaseOccupied: Boolean!
+}
+
+type BaseballEvent implements Event, Node, SubscribableResource, TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  awayTeam: BaseballTeam
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  boxScore: BaseballBoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  homeTeam: BaseballTeam
+  """The ID of an object"""
+  id: ID!
+  latestOdds: BaseballOdds
+  league: BaseballLeague
+  odds: [BaseballOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+  status: BaseballEventStatus!
+}
+
+enum BaseballEventStatus {
+  CANCELLED
+  DELAYED
+  FINAL
+  HALF_OVER
+  IN_PROGRESS
+  POSTPONED
+  PRE_GAME
+  SUSPENDED
+}
+
+type BaseballLeague implements League, Node, SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+type BaseballOdds implements Node, Odds, TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  favouredTeam: BaseballTeam
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  homeSpreadString: String
+  """The ID of an object"""
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  underOddsString: String
+}
+
+type BaseballSeason implements Node, Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  """The ID of an object"""
+  id: ID!
+  league: BaseballLeague
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+type BaseballTeam implements Node, SubscribableResource, Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  leagues: [BaseballLeague!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+type BasketballBoxScore implements BoxScore, Node {
+  """Away team in the bonus? `nil` if we don't get bonus data for this league"""
+  awayBonus: Boolean
+  """Away team's score"""
+  awayScore: Int!
+  """Home teams number of timeouts remaining, not sure when `null`"""
+  awayTimeoutsLeft: Int
+  """Home team in the bonus? `nil` if we don't get bonus data for this league"""
+  homeBonus: Boolean
+  """Home team's score"""
+  homeScore: Int!
+  """Away teams number of timeouts remaining, not sure when `null`"""
+  homeTimeoutsLeft: Int
+  """The ID of an object"""
+  id: ID!
+  """Current time"""
+  progress: Progress!
+}
+
+type BasketballEvent implements Event, Node, SubscribableResource, TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  awayTeam: BasketballTeam
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  boxScore: BasketballBoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  homeTeam: BasketballTeam
+  """The ID of an object"""
+  id: ID!
+  latestOdds: BasketballOdds
+  league: BasketballLeague
+  odds: [BasketballOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+  status: BasketballEventStatus!
+}
+
+enum BasketballEventStatus {
+  CANCELLED
+  DELAYED
+  FINAL
+  HALF_OVER
+  IN_PROGRESS
+  POSTPONED
+  PRE_GAME
+  SUSPENDED
+}
+
+type BasketballLeague implements League, Node, SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+type BasketballOdds implements Node, Odds, TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  favouredTeam: BasketballTeam
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  homeSpreadString: String
+  """The ID of an object"""
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  underOddsString: String
+}
+
+type BasketballSeason implements Node, Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  """The ID of an object"""
+  id: ID!
+  league: BasketballLeague
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+type BasketballTeam implements Node, SubscribableResource, Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  leagues: [BasketballLeague!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+"""Betting Polls"""
+type BettingPoll implements Node, Poll {
+  bareId: String!
+  closedAt: DateTime
+  """The ID of an object"""
+  id: ID!
+  options: [PollOption!]!
+  question: String!
+  status: PollStatus!
+  votesCount: Int!
+}
+
+"""Box score object for an event"""
+interface BoxScore {
+  """Away team's score"""
+  awayScore: Int!
+  """Home team's score"""
+  homeScore: Int!
+  """Current time"""
+  progress: Progress!
+}
+
+"""Colour, in 6 digit hex format, i.e. `00471B`, `D1202F`, `231D72`"""
+scalar Colour 
+
+enum CompetitionType {
+  INDIVIDUAL
+  TEAM
+  TOURNAMENT
+}
+
+"""This type namespaces data specific to the current user"""
+type CurrentUser {
+  """User's votes on polls for a specific event"""
+  votes(event: IDorURI!, pollTypes: [PollType!]!): [Vote!]
+}
+
+"""The `DateTime` scalar type represents a date and time in the UTC
+timezone. The DateTime appears in a JSON response as an ISO8601 formatted
+string, including UTC timezone ("Z"). The parsed date and time string will
+be converted to UTC and any UTC offset other than 0 will be rejected."""
+scalar DateTime 
+
+interface Event {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  id: ID!
+  """The 'primary' league this event is a part of.  May support multiple leagues in the future (for events shared between PGA/EPGA)."""
+  league: League
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+}
+
+enum EventPeriod {
+  CURRENT
+  PREVIOUS
+  UPCOMING
+}
+
+"""Generic event status"""
+enum EventStatus {
+  """Event was cancelled"""
+  CANCELLED
+  """Event start is delayed (perhaps due to weather)"""
+  DELAYED
+  """Event has finished"""
+  FINAL
+  """Half over status *may not be reliable*"""
+  HALF_OVER
+  """Event is in progress"""
+  IN_PROGRESS
+  """Event was postponed to another date"""
+  POSTPONED
+  """Event hasn't started yet"""
+  PRE_GAME
+  """Event was suspended (perhaps due to weather)"""
+  SUSPENDED
+}
+
+type EventUpdate {
+  event: Event!
+}
+
+"""home, away, draw"""
+enum FavouredAlignment {
+  """away team"""
+  AWAY
+  """draw"""
+  DRAW
+  """home team"""
+  HOME
+}
+
+"""A football box score"""
+type FootballBoxScore implements BoxScore, Node {
+  """Away team's score"""
+  awayScore: Int!
+  """Home teams number of timeouts remaining, `null` during half time???"""
+  awayTimeoutsLeft: Int
+  """*Not 100% sure about this field* Should the client display the field position indicator?"""
+  displayFpi: Boolean!
+  """Distance to the first down line, `null` during kickoffs, PATs, etc.."""
+  distance: Int
+  """Current down, `null` during kickoffs, PATs, etc..."""
+  down: Int
+  """Formatted field position, i.e. 'DAL 23' `field_position` field in API"""
+  formattedFieldPosition: String
+  """Home team's score"""
+  homeScore: Int!
+  """Away teams number of timeouts remaining, `null` during half time???"""
+  homeTimeoutsLeft: Int
+  """The ID of an object"""
+  id: ID!
+  """Which position, `null` during kickoffs, PATs, etc..."""
+  possession: TeamAlignment
+  """Current time"""
+  progress: Progress!
+  """In the red zone?"""
+  redZone: Boolean!
+  """Last play currently under video review?"""
+  underReview: Boolean!
+  """Distance to goal line, `null` during kickoffs, PATs, etc..."""
+  yardsFromGoal: Int
+}
+
+type FootballEvent implements Event, Node, SubscribableResource, TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  awayTeam: FootballTeam
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  boxScore: FootballBoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  homeTeam: FootballTeam
+  """The ID of an object"""
+  id: ID!
+  latestOdds: FootballOdds
+  league: FootballLeague
+  odds: [FootballOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+  status: FootballEventStatus!
+}
+
+enum FootballEventStatus {
+  CANCELLED
+  DELAYED
+  FINAL
+  FORFEIT_AWAY
+  FORFEIT_BOTH
+  FORFEIT_HOME
+  HALF_OVER
+  IN_PROGRESS
+  POSTPONED
+  PRE_GAME
+  SUSPENDED
+}
+
+type FootballLeague implements League, Node, SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+type FootballOdds implements Node, Odds, TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  favouredTeam: FootballTeam
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  homeSpreadString: String
+  """The ID of an object"""
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  underOddsString: String
+}
+
+type FootballSeason implements Node, Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  """The ID of an object"""
+  id: ID!
+  league: FootballLeague
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+type FootballTeam implements Node, SubscribableResource, Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  leagues: [FootballLeague!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+type HockeyBoxScore implements BoxScore, Node {
+  """Away team's score"""
+  awayScore: Int!
+  """Home team's score"""
+  homeScore: Int!
+  """The ID of an object"""
+  id: ID!
+  """Which team is on a power play"""
+  powerPlay: TeamAlignment
+  """Current time"""
+  progress: Progress!
+}
+
+type HockeyEvent implements Event, Node, SubscribableResource, TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  awayTeam: HockeyTeam
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  boxScore: HockeyBoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  homeTeam: HockeyTeam
+  """The ID of an object"""
+  id: ID!
+  latestOdds: HockeyOdds
+  league: HockeyLeague
+  odds: [HockeyOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+  status: HockeyEventStatus!
+}
+
+enum HockeyEventStatus {
+  CANCELLED
+  DELAYED
+  FINAL
+  HALF_OVER
+  IN_PROGRESS
+  POSTPONED
+  PRE_GAME
+  SUSPENDED
+}
+
+type HockeyLeague implements League, Node, SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+type HockeyOdds implements Node, Odds, TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  favouredTeam: HockeyTeam
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  homeSpreadString: String
+  """The ID of an object"""
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  underOddsString: String
+}
+
+type HockeySeason implements Node, Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  """The ID of an object"""
+  id: ID!
+  league: HockeyLeague
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+type HockeyTeam implements Node, SubscribableResource, Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  leagues: [HockeyLeague!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+"""GraphQL ID or an api_uri/resource_uri.  For example, '/mlb/teams/5'"""
+scalar IDorURI 
+
+type LacrosseBoxScore implements BoxScore, Node {
+  """Away team's score"""
+  awayScore: Int!
+  """Home team's score"""
+  homeScore: Int!
+  """The ID of an object"""
+  id: ID!
+  """Current time"""
+  progress: Progress!
+}
+
+type LacrosseEvent implements Event, Node, SubscribableResource, TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  awayTeam: LacrosseTeam
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  boxScore: LacrosseBoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  homeTeam: LacrosseTeam
+  """The ID of an object"""
+  id: ID!
+  latestOdds: LacrosseOdds
+  league: LacrosseLeague
+  odds: [LacrosseOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+  status: LacrosseEventStatus!
+}
+
+enum LacrosseEventStatus {
+  CANCELLED
+  FINAL
+  HALF_OVER
+  IN_PROGRESS
+  POSTPONED
+  PRE_GAME
+  SUSPENDED
+}
+
+type LacrosseLeague implements League, Node, SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+type LacrosseOdds implements Node, Odds, TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  favouredTeam: LacrosseTeam
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  homeSpreadString: String
+  """The ID of an object"""
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  underOddsString: String
+}
+
+type LacrosseSeason implements Node, Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  """The ID of an object"""
+  id: ID!
+  league: LacrosseLeague
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+type LacrosseTeam implements Node, SubscribableResource, Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  leagues: [LacrosseLeague!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+interface League {
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+interface Node {
+  """The id of the object."""
+  id: ID!
+}
+
+interface Odds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Date odds were received"""
+  date: DateTime
+  id: ID!
+}
+
+"""Polls"""
+interface Poll {
+  bareId: String!
+  closedAt: DateTime
+  id: ID!
+  options: [PollOption!]!
+  question: String!
+  status: PollStatus!
+  votesCount: Int!
+}
+
+"""Poll Options Inteface"""
+interface PollOption {
+  bareId: String!
+  id: ID!
+  votesCount: Int!
+}
+
+"""All possible Poll status"""
+enum PollStatus {
+  """Closed - new votes not allowed"""
+  CLOSED
+  """Open - new votes allowed"""
+  OPEN
+}
+
+"""All possible Poll types"""
+enum PollType {
+  """Betting Polls"""
+  BETTING_POLL
+}
+
+"""Represents how far a game has progressed (quarter/period/inning, time on clock, etc.)"""
+type Progress {
+  """The time on the clock (i.e. '5:32').  'Top'/'Bottom'/'End' for baseball."""
+  clock: String
+  """Basic description, i.e. '13:42 1st', 'Final (OT)', etc.."""
+  description: String!
+  """Global identifier, ie. 'FootballBoxScore:3'"""
+  id: ID! @deprecated(reason: "It never worked & doesn't (currently) make sense")
+  """In overtime periods/quarters?"""
+  overtime: Boolean!
+  """Current quarter/half/inning/etc... 1 = 1st, 2 = 2nd, etc.."""
+  segment: Int
+  """Baseball only currently.  'top', 'bottom', etc."""
+  segmentDivision: String
+  """Long formatted version of `segment`, i.e. '1st Quarter', '2nd Period'"""
+  segmentLong: String
+  """Short formatted version of `segment`, i.e. '1st', '2nd'"""
+  segmentShort: String
+  """Shootout after overtime?"""
+  shootout: Boolean!
+}
+
+"""The id of an object."""
+type RootMutationType {
+  """Vote in a poll"""
+  voteInPoll(input: VoteInPollInput!): VoteInPollPayload
+}
+
+type RootQueryType {
+  """Namespaces data specific to the current user"""
+  currentUser: CurrentUser
+  events(period: EventPeriod!, sports: [Sport!], teams: [IDorURI!]): [Event!]
+  node(id: ID!): Node
+  """Fetch a single event, team, or league, either by GraphQL ID, `api_uri` or `resource_uri`"""
+  resource(resource: IDorURI!): SubscribableResource
+  """Fetch a collection of event, team, or league, either by GraphQL ID, `api_uri` or `resource_uri`"""
+  resources(resources: [String!]!): [SubscribableResource]!
+}
+
+type RootSubscriptionType {
+  anyEventUpdated(filter: [AnyEventUpdatedFilter!]): EventUpdate!
+  eventUpdated(eventIds: [ID!]!): EventUpdate!
+}
+
+interface Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  id: ID!
+  """The league this season is a part of."""
+  league: League
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+"""Self explanatory"""
+enum Sex {
+  """Self explanatory"""
+  FEMALE
+  """Self explanatory"""
+  MALE
+  """Sex is not applicable/relevant, i.e. auto racing, olympics, entertainment wrestling"""
+  NOT_APPLICABLE
+}
+
+type SoccerBoxScore implements BoxScore, Node {
+  """Away team's score"""
+  awayScore: Int!
+  """Number of penalty/shootout goals for home away, `null` if game didn't go to penalties shootout"""
+  awayScoreShootout: Int
+  """Total number of red cards for the away team, likely eventually will be deprecated & replaced with teams records objects"""
+  awayTotalRedCards: Int
+  """Home team's score"""
+  homeScore: Int!
+  """Number of penalty/shootout goals for home team, `null` if game didn't go to penalties shootout"""
+  homeScoreShootout: Int
+  """Total number of red cards for the home team, likely eventually will be deprecated & replaced with teams records objects"""
+  homeTotalRedCards: Int
+  """The ID of an object"""
+  id: ID!
+  """Current time"""
+  progress: Progress!
+}
+
+type SoccerEvent implements Event, Node, SubscribableResource, TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  awayTeam: SoccerTeam
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  boxScore: SoccerBoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  homeTeam: SoccerTeam
+  """The ID of an object"""
+  id: ID!
+  latestOdds: SoccerOdds
+  league: SoccerLeague
+  odds: [SoccerOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+  status: SoccerEventStatus!
+}
+
+enum SoccerEventStatus {
+  CANCELLED
+  DELAYED
+  FINAL
+  HALF_OVER
+  IN_PROGRESS
+  POSTPONED
+  PRE_GAME
+  SUSPENDED
+}
+
+type SoccerLeague implements League, Node, SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Describes the format of the league, some example values could be: team | individual | tournament"""
+  competitionType: CompetitionType!
+  """Daily rollover time represents the time (in UTC) at which 'current' events rollover to 'previous'. Events are considered 'current' up until the rollover time the next day."""
+  dailyRolloverTime: String!
+  """The full extended name of the league, for example 'National Basketball Association'"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  """A longer version of the league's name, for example 'NBA Basketball'"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Describes whether the league is a men's or women's league"""
+  sex: Sex!
+  """A short version of the league's name, for example 'NBA'"""
+  shortName: String!
+  """Unique internal identifier for a league.  For example, 'nba'"""
+  slug: String!
+}
+
+type SoccerOdds implements Node, Odds, TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  favouredTeam: SoccerTeam
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  homeSpreadString: String
+  """The ID of an object"""
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  underOddsString: String
+}
+
+type SoccerSeason implements Node, Season {
+  """The API ID for the season"""
+  apiId: ID
+  """The API URI for the season (ex. /nhl/seasons/1)"""
+  apiUri: String
+  """The date the season ended"""
+  endDate: DateTime
+  """The ID of an object"""
+  id: ID!
+  league: SoccerLeague
+  """Name of the season, usually the year (ex. 2018-19)"""
+  name: String!
+  """The season year (ex. 2018)"""
+  seasonYear: String
+  """The date the season started"""
+  startDate: DateTime
+}
+
+type SoccerTeam implements Node, SubscribableResource, Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  """The ID of an object"""
+  id: ID!
+  leagues: [SoccerLeague!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+enum Sport {
+  AUTO
+  BASEBALL
+  BASKETBALL
+  CRICKET
+  FIGHTING
+  FOOTBALL
+  GOLF
+  HOCKEY
+  LACROSSE
+  MMA
+  OLYMPIC
+  SOCCER
+  TENNIS
+}
+
+"""Types that implement this interface have an id and a resourceUri field that can be used to communicate with other systems."""
+interface SubscribableResource {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """GraphQL global ID for the subscribable resource"""
+  id: ID!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+}
+
+"""A team"""
+interface Team {
+  """Abbrevation (i.e. EDM)"""
+  abbreviation: String!
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """Primary colour"""
+  colour1: Colour
+  """Secondary colour"""
+  colour2: Colour
+  """Full name (i.e. Edmonton Oilers)"""
+  fullName: String!
+  id: ID!
+  """Unordered list of leagues the team participates in"""
+  leagues: [League!]!
+  """Team's logos"""
+  logos: TeamLogo!
+  """Medium name (i.e. Edmonton)"""
+  mediumName: String!
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """Short name (i.e. Edmonton)"""
+  shortName: String!
+}
+
+"""Home or away?"""
+enum TeamAlignment {
+  """Away team"""
+  AWAY
+  """Home team"""
+  HOME
+}
+
+interface TeamEvent {
+  """`apiUri` should only be used to communicate with other systems that don't understand `resourceUri` or GraphQL's global IDs (field `id` in most types)."""
+  apiUri: String!
+  """The away team, or nil if the team has not yet been determined"""
+  awayTeam: Team
+  """`id` field of object from `api.thescore.com`, useful for analytics / ads, please use `id` field otherwise"""
+  bareId: Int!
+  """The 'box score' object, contains stats & scores regarding the event"""
+  boxScore: BoxScore
+  """Generic event status.  Use `status` (on the sport specific types) for more details"""
+  eventStatus: EventStatus!
+  """The home team, or nil if the team has not yet been determined"""
+  homeTeam: Team
+  id: ID!
+  """The lastest available odds for the event"""
+  latestOdds: TeamOdds
+  """The 'primary' league this event is a part of.  May support multiple leagues in the future (for events shared between PGA/EPGA)."""
+  league: League
+  """A list of all available odds data for the event"""
+  odds: [TeamOdds]!
+  """Get various polls for the current event"""
+  polls(status: PollStatus!, types: [PollType!]!): [Poll!]
+  """`resourceUri` should only be used to communicate with other systems that don't yet understand GraphQL's global IDs (field `id` in most types)."""
+  resourceUri: String!
+  """The event's start date/time"""
+  startsAt: DateTime
+}
+
+"""Object describing the various sized logos"""
+type TeamLogo {
+  """128 px by 128 px image"""
+  w128xh128: String
+  """20 px by 20 px image"""
+  w20xh20: String
+  """256 px by 256 px image"""
+  w256xh256: String
+  """72 px by 72 px image"""
+  w72xh72: String
+}
+
+"""Team Money Line Poll Options - PollOption with a team reference that should be displayed with money line odds"""
+type TeamMoneyLinePollOption implements Node, PollOption {
+  bareId: String!
+  """The ID of an object"""
+  id: ID!
+  teamAlignment: TeamAlignment!
+  teamResourceUri: String!
+  votesCount: Int!
+}
+
+interface TeamOdds {
+  """API ID for the odds (ex. 134)"""
+  apiId: ID!
+  """The API URI for the odds (ex. /nhl/timestamped_odds/134)"""
+  apiUri: String!
+  """Money line odds for away team"""
+  awayMoneylineOdds: Int
+  """String formatted money line odds for away team"""
+  awayMoneylineOddsString: String
+  """Point spread for away team to cover"""
+  awaySpread: Float
+  """String formatted point spread for away team to cover"""
+  awaySpreadString: String
+  """Date odds were received"""
+  date: DateTime
+  """Favoured outcome"""
+  favouredAlignment: FavouredAlignment
+  """Favoured team"""
+  favouredTeam: Team
+  """Money line odds for home team"""
+  homeMoneylineOdds: Int
+  """String formatted money line odds for home team"""
+  homeMoneylineOddsString: String
+  """Point spread for home team to cover"""
+  homeSpread: Float
+  """String formatted point spread for home team to cover"""
+  homeSpreadString: String
+  id: ID!
+  """Odds for total score being over total"""
+  overOdds: Int
+  """String formatted odds for total score being over total"""
+  overOddsString: String
+  """Total (for over/under bet)"""
+  total: Float
+  """String formatted total (for over/under bet)"""
+  totalString: String
+  """Odds for total score being under total"""
+  underOdds: Int
+  """String formatted odds for total score being under total"""
+  underOddsString: String
+}
+
+"""Team Spread Poll Options - PollOption with a team reference that should be displayed with point spreads"""
+type TeamSpreadPollOption implements Node, PollOption {
+  bareId: String!
+  """The ID of an object"""
+  id: ID!
+  teamAlignment: TeamAlignment!
+  teamResourceUri: String!
+  votesCount: Int!
+}
+
+"""Text Over/Under Poll Options - PollOption with a text string that should be displayed with Over/Under odds"""
+type TextOverUnderPollOption implements Node, PollOption {
+  bareId: String!
+  """The ID of an object"""
+  id: ID!
+  text: String!
+  votesCount: Int!
+}
+
+"""Text Poll Options - simplest PollOption with a text string"""
+type TextPollOption implements Node, PollOption {
+  bareId: String!
+  """The ID of an object"""
+  id: ID!
+  text: String!
+  votesCount: Int!
+}
+
+"""Poll Votes"""
+type Vote {
+  bareId: String!
+  id: ID!
+  poll: Poll!
+  selectedOption: PollOption!
+  voterId: String!
+}
+
+input VoteInPollInput {
+  pollId: ID!
+  pollOptionId: ID!
+}
+
+type VoteInPollPayload {
+  pollVote: Vote!
+}
